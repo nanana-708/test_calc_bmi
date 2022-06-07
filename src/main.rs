@@ -10,9 +10,22 @@ struct Index;
 
 #[derive(Template)]
 #[template(path="output.html")]
-struct UserInformation<'a>{
-    height: &'a str,
-    weight: &'a str,
+struct UserInformation {
+    height: String,
+    weight: String,
+    bmi: f32,
+}
+
+impl UserInformation {
+    fn init(height: String, weight: String) -> Self {
+        let h: f32 = height.parse().unwrap();
+        let w: f32  = weight.parse().unwrap();
+        Self {
+            height,
+            weight,
+            bmi: w / h / h,
+        }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -25,18 +38,14 @@ impl ResponseError for MyError{}
 #[get("/")]
 async fn index(query: web::Query<HashMap<String,String>>) 
 -> Result<HttpResponse, MyError> {
-    let response_body = if let Some(height) 
-    = query.get("height"){
-        UserInformation{
-            height,
-            weight: "50",
-        }
-        .render()
-        .unwrap()
-    }else{
+    let response_body = if let (Some(height), Some(weight)) = (query.get("height"), query.get("weight")) {
+        UserInformation::init(height.to_string(), weight.to_string())
+            .render()
+            .unwrap()
+    } else {
         Index.render().unwrap()
-
     };
+
     Ok(HttpResponse::Ok()
     .content_type("text/html")
     .body(response_body))
